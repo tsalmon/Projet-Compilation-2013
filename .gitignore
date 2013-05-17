@@ -1,0 +1,7 @@
+*
+!.gitignore
+!lexer.mll
+!parser.mly
+!typecheck.ml
+!typecheck.mli
+!interpreter.ml
