@@ -10,8 +10,8 @@
 
 %token RPAREN LPAREN RCROCH LCROCH RACOLA LACOLA LCHEVR RCHEVR TYPE FLECH FLECHB AND OR NOT DEFFUN REC IS VAL DEF WITH PZERO PONE EOF
 %token DEFTYPE COMMA POINTCOMMA IN WHERE END POINT BAR
-%token CASE AT IF THEN ELSE FUN DO 
-%token<string> VAR_OR_TYPE CONSTR STRING OPAND OPOR OPCOMP PLUS MULT DIV MOD MINUS EQ EQS TILDE
+%token CASE AT ORB IF THEN ELSE FUN DO 
+%token<string> VAR_OR_TYPE CONSTR STRING OPAND OPOR OPCOMP PLUS MULT DIV MOD ADD MINUS EQ EQS TILDE
 %token<char> CHAR
 %token<int>INT
 %start<AST.program> program
@@ -21,12 +21,18 @@
 
 
 %left MULT DIV MOD
-%left PLUS MINUS 
+%left PLUS MINUS TILDE
 %left OPCOMP LCHEVR RCHEVR
 %left OPAND
 %left OPOR
 %left EQ
 
+%left Op
+%left Unop
+
+
+%left POR PAND
+%left PNOT
 %%
 
 program: d=definitions EOF {d}
@@ -46,7 +52,7 @@ x=vdefinition { DVal x }
  
 
 vdefinition:
-VAL b=binding EQ e=expr{ Simple(b,e) }
+VAL b=binding EQ e=expr { Simple(b,e) }
 | DEF m=mutuallyR { MutuallyRecursive (m) }
 
 mutuallyR:
@@ -122,6 +128,7 @@ e=exprseq {e}
 |e=exprprincipal{e}
 
 
+
 exprprincipal: 
 e =exprfinal {e}
 
@@ -139,7 +146,7 @@ e =exprfinal {e}
 | e=exprunopminus {e}
 | e=exprunoptilde {e}
 
-|  CASE AT t=typ LACOLA BAR? b=branches RACOLA { ECase(Some t,b) }
+| CASE AT t=typ LACOLA BAR? b=branches RACOLA { ECase(Some t,b) }
 | CASE LACOLA BAR? b=branches RACOLA { ECase(None,b) }
 
 
@@ -192,19 +199,14 @@ exprfinal:
 | e=value_identifier { EVar e }
 
 exprunopminus:
- MINUS e=INT { EApp(EVar (Identifier "-"),EInt e) }
-(* MINUS e=INT %prec Unop{ EApp(EVar (Identifier "-"),EInt e) }*)
-(*| MINUS e=value_identifier %prec Unop{ EApp(EVar (Identifier "-"),EVar e) }*)
-| MINUS e=value_identifier { EApp(EVar (Identifier "-"),EVar e) }
-(*| MINUS LPAREN e=expr RPAREN %prec Unop{ EApp(EVar (Identifier "-"), e) }*)
-| MINUS LPAREN e=expr RPAREN{ EApp(EVar (Identifier "-"), e) }
+ MINUS e=INT %prec Unop{ EApp(EVar (Identifier "-"),EInt e) }
+| MINUS e=value_identifier %prec Unop{ EApp(EVar (Identifier "-"),EVar e) }
+| MINUS LPAREN e=expr RPAREN %prec Unop{ EApp(EVar (Identifier "-"), e) }
+
 exprunoptilde:
-(* TILDE e=INT %prec Unop{ EApp(EVar (Identifier "~"),EInt e) }*)
- TILDE e=INT{ EApp(EVar (Identifier "~"),EInt e) }
-(*| TILDE e=value_identifier %prec Unop{ EApp(EVar (Identifier "~"),EVar e) }*)
-| TILDE e=value_identifier { EApp(EVar (Identifier "~"),EVar e) }
-| TILDE LPAREN e=expr RPAREN { EApp(EVar (Identifier "~"), e) }
-(*| TILDE LPAREN e=expr RPAREN %prec Unop{ EApp(EVar (Identifier "~"), e) }*)
+ TILDE e=INT %prec Unop{ EApp(EVar (Identifier "~"),EInt e) }
+| TILDE e=value_identifier %prec Unop{ EApp(EVar (Identifier "~"),EVar e) }
+| TILDE LPAREN e=expr RPAREN %prec Unop{ EApp(EVar (Identifier "~"), e) }
 
 crochexpr:
 LCROCH e=expr RCROCH { e }
@@ -274,10 +276,9 @@ i=VAR_OR_TYPE { Identifier i }
 constructor_identifier:
 i=CONSTR { CIdentifier i }
 
-(*%inline unop:
+%inline unop:
 i=MINUS { Identifier i }
 | i=TILDE { Identifier i }
-*)
 
 type_identifier:
 i=VAR_OR_TYPE { TIdentifier i }
@@ -285,4 +286,7 @@ i=VAR_OR_TYPE { TIdentifier i }
 type_identifiers:
 t=type_identifier COMMA l=type_identifiers { t::l }
 |t=type_identifier { [t] }
+
+
+
 
