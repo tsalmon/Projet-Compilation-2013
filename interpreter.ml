@@ -42,8 +42,8 @@ let ipr_binding = function
 (* call by ipr_def *)
 let ipr_vdef e = function
   | Simple (Binding(ar,t), EInt(i)) ->   
-    let x=(Env.declare (AST.Named(AST.Identifier "x"))  e) in 
-    (Env.define ar (Runtime.VInt i) x)
+    let x=(Env.declare ar  e) in 
+    (Env.define ar (Runtime.VInt i) x); x
   | Simple (b, exp) -> failwith "simple"
   | MutuallyRecursive m -> failwith "mutually"
 
@@ -59,4 +59,11 @@ let rec ipr_program e = function
     
 let program : AST.program -> env = function
   | a -> ipr_program (Env.empty ()) a
-    
+
+
+(*
+let program : AST.program -> env = function
+  | _ -> 
+    let x=(Env.declare (AST.Named(AST.Identifier "x"))  (Env.empty ()))
+    in Env.define (AST.Named(AST.Identifier("x"))) (Runtime.VInt 10) x; x
+*)
