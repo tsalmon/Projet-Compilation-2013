@@ -10,15 +10,14 @@ type env = Primitive.t Runtime.venv
 
 let e = ref (Env.empty ()) ;;
 
-(*
-let rec expression_appr= function 
-   | (EApp(exprA,exprB),EInt i) -> ( Primitive.apply (expression_appr(exprA,exprB)) (Runtime.VInt i))
-   | (EVar v,EInt i) -> (Primitive.apply (Primitive.lookup v) (Runtime.VInt i))
-*)
+let prim = function 
+   | VPrimitive p-> p  
+             
 
-let expression_app= function 
-   (* |(EApp(exprA,exprB),EInt i) -> Runtime.VInt (Primitive.apply (expression_appr(exprA,exprB)) (Runtime.VInt i))*)
-    |(EVar v,EInt i) ->  i
+let rec expression_app= function 
+    |(EApp(exprA,exprB),EInt i) -> Primitive.apply (prim (expression_app(exprA,exprB))) (Runtime.VInt i)
+    | (EVar v,EInt  i) -> Primitive.apply (prim (Primitive.lookup v)) (Runtime.VInt i)
+    | _ -> failwith "app non reconu"
 
 let expression = function 
    | EInt i             -> Runtime.VInt i
@@ -30,7 +29,7 @@ let expression = function
    | EAnnot (_,_)       -> failwith "expr non fonctionnel"
    | ESeq (_)         -> failwith "expr non fonctionnel"
    | EDef (_,_)         -> failwith "expr non fonctionnel"
-   | EApp(exprA,exprB) ->  Runtime.VInt (expression_app (exprA,exprB))
+   | EApp(exprA,exprB) ->  (expression_app (exprA,exprB))
    | ECase(_,_)         -> failwith "expr non fonctionnel"
    | EFun (_,_)         -> failwith "expr non fonctionnel"
 
@@ -58,5 +57,4 @@ let program : AST.program -> env = function
   | [] -> e
   | _ -> failwith "non reconnu"
 *)
-
 
