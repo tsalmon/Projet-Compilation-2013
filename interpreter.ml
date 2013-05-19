@@ -11,14 +11,20 @@ type env = Primitive.t Runtime.venv
 let e = ref (Env.empty ()) ;;
 
 
+let expression = function 
+   | (EInt i) -> Runtime.VInt i
+   
 
 
-let rec program: AST.program -> env  =function 
+
+let rec program: AST.program -> env  = function 
   | (DVal v)::b -> begin match v with
-      | Simple (Binding(a_i,_),expr) ->  e:=(Env.declare (a_i)  !e) ; (Env.define (a_i)  (Runtime.VInt 3) !e); program b;
+      | Simple (Binding(a_i,_),expr) ->  e:=(Env.declare (a_i)  !e) ; (Env.define (a_i)  (expression expr)  !e); program b;
       end ; 
   | [] -> !e
   | _ -> failwith "non reconnu"
+
+
 
 (*
 let rec programm e : AST.program -> env  =function 
