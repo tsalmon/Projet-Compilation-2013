@@ -40,18 +40,27 @@ let ipr_binding = function
 
 
 (* call by ipr_def *)
-let ipr_vdef e = function
-  | Simple (Binding(ar,t), EInt(i)) ->   
-    let x=(Env.declare ar  e) in 
-    (Env.define ar (Runtime.VInt i) x); x
-  | Simple (b, exp) -> failwith "simple"
-  | MutuallyRecursive m -> failwith "mutually"
+let ipr_vdef_simple envi b exp= match b, exp with
+    | (Binding(ar,t), EInt(i)) ->   
+      let x=(Env.declare ar  envi) in 
+      (Env.define ar (Runtime.VInt i) x); x
+    | (Binding(ar,t), EChar(c)) ->   
+      let x=(Env.declare ar  envi) in 
+      (Env.define ar (Runtime.VChar c) x); x
+    | (Binding(ar,t), EString(s)) ->   
+      let x=(Env.declare ar  envi) in 
+      (Env.define ar (Runtime.VString s) x); x
+    | (Binding(ar,t), EVar(v)) -> 
+      let x=(Env.lookup Named(v) envi) in 
+      (Env.define ar (Runtime.VString s) x); x
+    | (x, y) -> failwith "simple"
+      
 
 (* call by ipr_program *)
 let ipr_def  e = function 
   | DType (identifier, identifiers, t) -> failwith "dtype"
-  | DVal  v -> ipr_vdef e v
-    
+  | DVal  (MutuallyRecursive m) -> failwith "mutally"
+  | DVal  (Simple (a,b)) -> ipr_vdef_simple e a b
 (* call by program *)
 let rec ipr_program e = function
   | [] -> e
