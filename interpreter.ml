@@ -7,7 +7,7 @@ type value = Primitive.t Runtime.value
 
 type env = Primitive.t Runtime.venv
 
-let e = Env.empty ()
+(*let e = Env.empty () *)
 
 (*
   | (DVal v)::b ->  
@@ -36,11 +36,15 @@ let ipr_vdef = function
   | Simple (Binding(a,t), e) -> ipr_expr e
   | MutuallyRecursive m -> failwith "mutually"
 
-(* call by program *)
-let ipr_def = function 
+(* call by ipr_program *)
+let ipr_def  e = function 
   | DType (identifier, identifiers, t) -> failwith "dtype"
   | DVal  v -> ipr_vdef v
 
+(* call by program *)
+let rec ipr_program e = function
+  | [] -> e
+  | a::b -> ipr_program (ipr_def e a) b
+
 let program : AST.program -> env = function
-  | [] -> Env.empty ()
-  | a::b -> ipr_def a
+  | a -> ipr_program (Env.empty ()) a
