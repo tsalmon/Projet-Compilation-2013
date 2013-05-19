@@ -7,72 +7,56 @@ type value = Primitive.t Runtime.value
 
 type env = Primitive.t Runtime.venv
 
-(*let e = Env.empty () *)
+
+let e = ref (Env.empty ()) ;;
 
 (*
-  | (DVal v)::b ->  
-    let e=(Env.declare (AST.Named(AST.Identifier "x"))  e) in 
-  (Env.define (AST.Named(AST.Identifier "x")) (Runtime.VInt 30) e);
-  e
+let rec expression_appr= function 
+   | (EApp(exprA,exprB),EInt i) -> ( Primitive.apply (expression_appr(exprA,exprB)) (Runtime.VInt i))
+   | (EVar v,EInt i) -> (Primitive.apply (Primitive.lookup v) (Runtime.VInt i))
 *)
-    
-(* call by ipr_vdef *)
-let ipr_expr ev = function
-  | EInt(i) -> print_int(i);print_string("\n");failwith "int"
-  | EChar(c) -> failwith "char"
-  | EString(s) -> failwith "string"
-  | EVar(v) -> failwith "var"
-  | ESum(c, t , e ) -> failwith "sum"
-  | EProd(t, c)-> failwith "prod"
-  | EAnnot(e, t) -> failwith "annot"
-  | ESeq(e) -> failwith "seq"
-  | EDef(v, e) -> failwith "def"
-  | EApp(e1, e2) -> failwith "app"
-  | ECase(t, b) -> failwith "case"
-  | EFun( b, e) -> failwith "fun"
 
-let ipr_arg_id e = function
-  | Named(Identifier(s)) -> s
-  | Unnamed -> "_"
+let expression_app= function 
+   (* |(EApp(exprA,exprB),EInt i) -> Runtime.VInt (Primitive.apply (expression_appr(exprA,exprB)) (Runtime.VInt i))*)
+    |(EVar v,EInt i) ->  i
 
-let ipr_binding = function 
-  | Binding(ar, t) -> ipr_arg_id ar 
+let expression = function 
+   | EInt i             -> Runtime.VInt i
+   | EChar c            -> Runtime.VChar c
+   | EString chaine     -> Runtime.VString chaine
+   | EVar id            -> Env.lookup (AST.Named id) !e
+   | ESum (_,_,_)       -> failwith "expr non fonctionnel"
+   | EProd (_,_)        -> failwith "expr non fonctionnel"
+   | EAnnot (_,_)       -> failwith "expr non fonctionnel"
+   | ESeq (_)         -> failwith "expr non fonctionnel"
+   | EDef (_,_)         -> failwith "expr non fonctionnel"
+   | EApp(exprA,exprB) ->  Runtime.VInt (expression_app (exprA,exprB))
+   | ECase(_,_)         -> failwith "expr non fonctionnel"
+   | EFun (_,_)         -> failwith "expr non fonctionnel"
 
+let rec program: AST.program -> env  = function 
+  | (DVal v)::b -> begin match v with
+      | Simple (Binding(a_i,_),expr) ->  e:=(Env.declare (a_i)  !e) ; (Env.define (a_i)  (expression expr)  !e); program b;
+      end ; 
+  | [] -> !e
+  | _ -> failwith "non reconnu"
 
-(* call by ipr_def *)
-let ipr_vdef_simple envi b exp= match b, exp with
-    | (Binding(ar,t), EInt(i)) ->   
-      let x=(Env.declare ar  envi) in 
-      (Env.define ar (Runtime.VInt i) x); x
-    | (Binding(ar,t), EChar(c)) ->   
-      let x=(Env.declare ar  envi) in 
-      (Env.define ar (Runtime.VChar c) x); x
-    | (Binding(ar,t), EString(s)) ->   
-      let x=(Env.declare ar  envi) in 
-      (Env.define ar (Runtime.VString s) x); x
-    | (Binding(ar,t), EVar(v)) -> 
-      let x=(Env.lookup Named(v) envi) in 
-      (Env.define ar (Runtime.VString s) x); x
-    | (x, y) -> failwith "simple"
-      
-
-(* call by ipr_program *)
-let ipr_def  e = function 
-  | DType (identifier, identifiers, t) -> failwith "dtype"
-  | DVal  (MutuallyRecursive m) -> failwith "mutally"
-  | DVal  (Simple (a,b)) -> ipr_vdef_simple e a b
-(* call by program *)
-let rec ipr_program e = function
+(*
+let rec programm e : AST.program -> env  =function 
+  | (DVal v)::b -> begin match v with
+      | Simple (Binding(a_i,_),expr) -> let eA=(Env.declare (a_i)  e) in (Env.define (a_i)  (Runtime.VInt 3) eA); programm eA b;
+      end ; 
   | [] -> e
-  | a::b -> ipr_program (ipr_def e a) b
-    
-let program : AST.program -> env = function
-  | a -> ipr_program (Env.empty ()) a
+  | _ -> failwith "non reconnu"
 
-
-(*
 let program : AST.program -> env = function
-  | _ -> 
-    let x=(Env.declare (AST.Named(AST.Identifier "x"))  (Env.empty ()))
-    in Env.define (AST.Named(AST.Identifier("x"))) (Runtime.VInt 10) x; x
+  | a -> let eA=(Env.declare (AST.Named(AST.Identifier "f"))  ea) in (Env.define (AST.Named(AST.Identifier "f"))  (Runtime.VInt 15) eA); programm eA a;
+
+  | (DVal v)::b -> begin match v with
+      | Simple (Binding(a_i,_),expr) -> let eA=(Env.declare (a_i)  e) in (Env.define (a_i)  (Runtime.VInt 3) eA);eA
+      end ; program b
+  | [] -> e
+  | _ -> failwith "non reconnu"
 *)
+
+
