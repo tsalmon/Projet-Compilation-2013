@@ -34,18 +34,12 @@ let expression = function
    | ECase(_,_)         -> failwith "expr non fonctionnel"
    | EFun (_,_)         -> failwith "expr non fonctionnel"
 
-   
-
-
-
 let rec program: AST.program -> env  = function 
   | (DVal v)::b -> begin match v with
       | Simple (Binding(a_i,_),expr) ->  e:=(Env.declare (a_i)  !e) ; (Env.define (a_i)  (expression expr)  !e); program b;
       end ; 
   | [] -> !e
   | _ -> failwith "non reconnu"
-
-
 
 (*
 let rec programm e : AST.program -> env  =function 
