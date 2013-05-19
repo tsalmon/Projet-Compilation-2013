@@ -10,26 +10,23 @@ type env = Primitive.t Runtime.venv
 
 let e = ref (Env.empty ()) ;;
 
-let prim = function 
-   | VPrimitive p-> p  
              
 
 let rec expression_app= function 
-    |(EApp(exprA,exprB),EInt i) -> Primitive.apply (prim (expression_app(exprA,exprB))) (Runtime.VInt i)
-    | (EVar v,EInt  i) -> Primitive.apply (prim (Primitive.lookup v)) (Runtime.VInt i)
+    | (VPrimitive p,VInt i) -> Primitive.apply p (Runtime.VInt i)
     | _ -> failwith "app non reconu"
 
-let expression = function 
+let rec expression = function 
    | EInt i             -> Runtime.VInt i
    | EChar c            -> Runtime.VChar c
    | EString chaine     -> Runtime.VString chaine
-   | EVar id            -> Env.lookup (AST.Named id) !e
+   | EVar id            -> if (Primitive.identifier id) then (Primitive.lookup id) else (Env.lookup (AST.Named id) !e)
    | ESum (_,_,_)       -> failwith "expr non fonctionnel"
    | EProd (_,_)        -> failwith "expr non fonctionnel"
    | EAnnot (_,_)       -> failwith "expr non fonctionnel"
    | ESeq (_)         -> failwith "expr non fonctionnel"
    | EDef (_,_)         -> failwith "expr non fonctionnel"
-   | EApp(exprA,exprB) ->  (expression_app (exprA,exprB))
+   | EApp(exprA,exprB) ->  (expression_app ((expression exprA),(expression exprB)))
    | ECase(_,_)         -> failwith "expr non fonctionnel"
    | EFun (_,_)         -> failwith "expr non fonctionnel"
 
