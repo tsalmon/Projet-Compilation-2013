@@ -10,35 +10,43 @@ type env = Primitive.t Runtime.venv
 
 let e = ref (Env.empty ()) ;;
 
-let prim = function 
-   | VPrimitive p-> p  
              
 
-let rec expression_app= function 
-    |(EApp(exprA,exprB),EInt i) -> Primitive.apply (prim (expression_app(exprA,exprB))) (Runtime.VInt i)
-    | (EVar v,EInt  i) -> Primitive.apply (prim (Primitive.lookup v)) (Runtime.VInt i)
-    | _ -> failwith "app non reconu"
-
-let expression = function 
+let rec expression env= function 
    | EInt i             -> Runtime.VInt i
    | EChar c            -> Runtime.VChar c
    | EString chaine     -> Runtime.VString chaine
-   | EVar id            -> Env.lookup (AST.Named id) !e
-   | ESum (_,_,_)       -> failwith "expr non fonctionnel"
+   | EVar id            -> if (Primitive.identifier id) then (Primitive.lookup id) else (Env.lookup (AST.Named id) env)
+   | ESum ( c, t, e)    -> VStruct([(c, VPrimitive e)])
    | EProd (_,_)        -> failwith "expr non fonctionnel"
-   | EAnnot (_,_)       -> failwith "expr non fonctionnel"
-   | ESeq (_)         -> failwith "expr non fonctionnel"
-   | EDef (_,_)         -> failwith "expr non fonctionnel"
-   | EApp(exprA,exprB) ->  (expression_app (exprA,exprB))
+   | EAnnot (expr,_)       -> expression env expr 
+   | ESeq (exprs)           -> expresion_seq env exprs
+   | EDef (v,expr)         -> expression (vdefinition env v) expr
+   | EApp(exprA,exprB)  ->  (expression_app ((expression env exprA),(expression env exprB)))
    | ECase(_,_)         -> failwith "expr non fonctionnel"
-   | EFun (_,_)         -> failwith "expr non fonctionnel"
+   | EFun (b,f) -> VClosure((Env.empty ()), Branch(POne, EFun(b,f))::[])
+
+and expresion_seq env = function 
+   | expr::[] -> expression env expr
+   | expr::exprs -> expression env expr ; expresion_seq env exprs;
+    
+
+and expression_app = function 
+   | (VPrimitive p, i) -> Primitive.apply p  i
+   | ( (  VClosure (env,Branch(POne , EFun(Binding(a_i,_),EFun(b,f)))::[] )  )  , i ) ->  VClosure((Env.bind a_i i env), Branch(POne, EFun(b,f))::[])
+   | ( (  VClosure (env,Branch(POne , EFun(Binding(a_i,_),expr))::[] )  )  , i ) ->  expression (Env.bind a_i i env) expr
+   | _ -> failwith "app non reconu"
+
+and vdefinition env = function 
+  | Simple (Binding(a_i,_),expr) ->  (Env.bind (a_i)  (expression env expr)  env)
+
 
 let rec program: AST.program -> env  = function 
-  | (DVal v)::b -> begin match v with
-      | Simple (Binding(a_i,_),expr) ->  e:=(Env.declare (a_i)  !e) ; (Env.define (a_i)  (expression expr)  !e); program b;
-      end ; 
+  | (DVal v)::b -> e:=(vdefinition !e v) ;program b;
   | [] -> !e
   | _ -> failwith "non reconnu"
+
+
 
 (*
 let rec programm e : AST.program -> env  =function 
@@ -57,4 +65,5 @@ let program : AST.program -> env = function
   | [] -> e
   | _ -> failwith "non reconnu"
 *)
+
 
