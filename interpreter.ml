@@ -19,9 +19,9 @@ let rec expression env= function
    | EVar id            -> if (Primitive.identifier id) then (Primitive.lookup id) else (Env.lookup (AST.Named id) env)
    | ESum (_,_,_)       -> failwith "expr non fonctionnel"
    | EProd (_,_)        -> failwith "expr non fonctionnel"
-   | EAnnot (_,_)       -> failwith "expr non fonctionnel"
+   | EAnnot (expr,_)       -> expression env expr 
    | ESeq (_)           -> failwith "expr non fonctionnel"
-   | EDef (_,_)         -> failwith "expr non fonctionnel"
+   | EDef (v,expr)         -> expression (vdefinition env v) expr
    | EApp(exprA,exprB)  ->  (expression_app ((expression env exprA),(expression env exprB)))
    | ECase(_,_)         -> failwith "expr non fonctionnel"
    | EFun (b,f) -> VClosure((Env.empty ()), Branch(POne, EFun(b,f))::[])
@@ -33,15 +33,16 @@ and expression_app = function
    | ( (  VClosure (env,Branch(POne , EFun(Binding(a_i,_),expr))::[] )  )  , i ) ->  expression (Env.bind a_i i env) expr
    | _ -> failwith "app non reconu"
 
-
+and vdefinition env = function 
+  | Simple (Binding(a_i,_),expr) ->  (Env.bind (a_i)  (expression env expr)  env)
 
 
 let rec program: AST.program -> env  = function 
-  | (DVal v)::b -> begin match v with
-      | Simple (Binding(a_i,_),expr) ->  e:=(Env.declare (a_i)  !e) ; (Env.define (a_i)  (expression !e expr)  !e); program b;
-      end ; 
+  | (DVal v)::b -> e:=(vdefinition !e v) ;program b;
   | [] -> !e
   | _ -> failwith "non reconnu"
+
+
 
 (*
 let rec programm e : AST.program -> env  =function 
