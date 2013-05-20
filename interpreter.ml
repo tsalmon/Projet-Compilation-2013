@@ -10,24 +10,24 @@ type env = Primitive.t Runtime.venv
 
 let e = ref (Env.empty ()) ;;
 
-             
 
 let rec expression env= function 
-   | EInt i             -> Runtime.VInt i
-   | EChar c            -> Runtime.VChar c
-   | EString chaine     -> Runtime.VString chaine
-   | EVar id            -> if (Primitive.identifier id) then (Primitive.lookup id) else (Env.lookup (AST.Named id) env)
-   | ESum ( c, t, Some e)    -> VStruct([(c, Some (expression env e))]) (*;VStruct([(c, expression env e)])*)
-   | ESum (c, t, _ ) -> VStruct([(c, None)])
-   | EProd (_,_)        -> failwith "expr non fonctionnel"
-   | EAnnot (expr,_)       -> expression env expr 
-   | ESeq (exprs)           -> expresion_seq env exprs
-   | EDef (v,expr)         -> expression (vdefinition env v) expr
-   | EApp(exprA,exprB)  ->  (expression_app ((expression env exprA),(expression env exprB)))
-   | ECase(_,_)         -> failwith "expr non fonctionnel"
+   | EInt i               -> Runtime.VInt i
+   | EChar c              -> Runtime.VChar c
+   | EString chaine       -> Runtime.VString chaine
+   | EVar id              -> if (Primitive.identifier id) then (Primitive.lookup id) else (Env.lookup (AST.Named id) env)
+   | ESum ( c, t, Some e) -> VStruct([(c, Some (expression env e))]) (*;VStruct([(c, expression env e)])*)
+   | ESum (c, t, _ )      -> VStruct([(c, None)])
+   | EProd (_, c)          -> VStruct (expression_prod env c) (*failwith "prod expr non fonctionnel"*)
+   | EAnnot (expr,_)      -> expression env expr 
+   | ESeq (exprs)         -> expresion_seq env exprs
+   | EDef (v,expr)        -> expression (vdefinition env v) expr
+   | EApp(exprA,exprB)    ->  (expression_app ((expression env exprA),(expression env exprB)))
+   | ECase(_,_)           -> failwith "expr non fonctionnel"
    | EFun (b,f) -> VClosure((Env.empty ()), Branch(POne, EFun(b,f))::[])
 
 and expresion_seq env = function 
+   | [] -> failwith "error"
    | expr::[] -> expression env expr
    | expr::exprs -> expression env expr ; expresion_seq env exprs;
     
@@ -40,7 +40,12 @@ and expression_app = function
 
 and vdefinition env = function 
   | Simple (Binding(a_i,_),expr) ->  (Env.bind (a_i)  (expression env expr)  env)
+  | _ -> failwith "autre "
 
+and expression_prod env = function
+   | [] -> []
+   | (c,Some e)::q -> (c, Some (expression env e))::(expression_prod env q)
+   | (c,_)::q -> (c, None)::(expression_prod env q)
 
 let rec program: AST.program -> env  = function 
   | (DVal v)::b -> e:=(vdefinition !e v) ;program b;
