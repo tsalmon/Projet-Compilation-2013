@@ -20,12 +20,16 @@ let rec expression env= function
    | ESum (_,_,_)       -> failwith "expr non fonctionnel"
    | EProd (_,_)        -> failwith "expr non fonctionnel"
    | EAnnot (expr,_)       -> expression env expr 
-   | ESeq (_)           -> failwith "expr non fonctionnel"
+   | ESeq (exprs)           -> expresion_seq env exprs
    | EDef (v,expr)         -> expression (vdefinition env v) expr
    | EApp(exprA,exprB)  ->  (expression_app ((expression env exprA),(expression env exprB)))
    | ECase(_,_)         -> failwith "expr non fonctionnel"
    | EFun (b,f) -> VClosure((Env.empty ()), Branch(POne, EFun(b,f))::[])
 
+and expresion_seq env = function 
+   | expr::[] -> expression env expr
+   | expr::exprs -> expression env expr ; expresion_seq env exprs;
+    
 
 and expression_app = function 
    | (VPrimitive p, i) -> Primitive.apply p  i
