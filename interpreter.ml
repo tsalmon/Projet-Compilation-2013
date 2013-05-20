@@ -17,7 +17,8 @@ let rec expression env= function
    | EChar c            -> Runtime.VChar c
    | EString chaine     -> Runtime.VString chaine
    | EVar id            -> if (Primitive.identifier id) then (Primitive.lookup id) else (Env.lookup (AST.Named id) env)
-   | ESum ( c, t, e)    -> VStruct([(c, VPrimitive e)])
+   | ESum ( c, t, Some e)    -> VStruct([(c, Some (expression env e))]) (*;VStruct([(c, expression env e)])*)
+   | ESum (c, t, _ ) -> VStruct([(c, None)])
    | EProd (_,_)        -> failwith "expr non fonctionnel"
    | EAnnot (expr,_)       -> expression env expr 
    | ESeq (exprs)           -> expresion_seq env exprs
