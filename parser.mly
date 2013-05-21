@@ -194,6 +194,7 @@ expropnivF:
 
 exprfinal:
  e=INT { EInt e}
+| PZERO { EInt 0}
 | e=CHAR { EChar e}
 | e=STRING { EString e}
 | e=value_identifier { EVar e }
@@ -232,12 +233,6 @@ b=branche BAR l=branches {b::l}
 |b=branche {[b]}
 
 pattern:
-c=constructor_identifier AT t=typ LCROCH p=pattern RCROCH { PSum(c,Some t,Some p) } 
-| c=constructor_identifier LCROCH p=pattern RCROCH { PSum(c,None,Some p) }
-| c=constructor_identifier AT t=typ  { PSum(c,Some t,None) }
-| c=constructor_identifier { PSum(c,None,None) }
-| LACOLA c=patternproduits RACOLA{ PProd (None,c) }
-| AT t=typ LACOLA c=patternproduits RACOLA{ PProd (Some t,c) }
 | p=patternopnivA {p}
 | LPAREN p=pattern RPAREN { p }
 | p=patternfinal {p}
@@ -251,7 +246,7 @@ patternopnivB:
 | p=patternopnivC {p}
 
 patternopnivC:
-LPAREN p=patternopnivA RPAREN {p}
+LPAREN p=pattern RPAREN {p}
 | NOT p=patternopnivC { PNot p }
 | p=patternfinal {p}
 
@@ -259,6 +254,12 @@ patternfinal:
  PZERO { PZero }
 | p=value_identifier { PVar p }
 | PONE { POne }
+| c=constructor_identifier AT t=typ LCROCH p=pattern RCROCH { PSum(c,Some t,Some p) } 
+| c=constructor_identifier LCROCH p=pattern RCROCH { PSum(c,None,Some p) }
+| c=constructor_identifier AT t=typ  { PSum(c,Some t,None) }
+| c=constructor_identifier { PSum(c,None,None) }
+| LACOLA c=patternproduits RACOLA{ PProd (None,c) }
+| AT t=typ LACOLA c=patternproduits RACOLA{ PProd (Some t,c) }
 
 patternproduits:
 c=patternproduit COMMA l=patternproduits { c::l }
