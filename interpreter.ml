@@ -26,7 +26,7 @@ let rec expression env= function
    | EDef (v,expr)         -> expression (vdefinition env v) expr
    | EApp(exprA,exprB)     ->  (expression_app ((expression env exprA),(expression env exprB)))
    | ECase(_,c)            -> VClosure(env,c)
-   | EFun (b,f)            -> VClosure((env), Branch(POne, EFun(b,f))::[])
+   | EFun (b,f)            -> VClosure(env, Branch(POne, EFun(b,f))::[])
 
 and expresion_seq env = function 
    | expr::[] -> expression env expr
@@ -37,9 +37,9 @@ and expresion_seq env = function
 
 and expression_app = function 
    | (VPrimitive p, i) -> Primitive.apply p  i
-   | ( (  VClosure (env,Branch(POne , EFun(Binding(a_i,_),expr))::[] )  )  , i ) ->  expression (Env.bind a_i i env) expr
-   | (VClosure(env,Branch(p,e)::l),s)-> let (envf,rf)= (closure env s p) in if rf then (expression envf e) else (expression_app (VClosure(env,l),s))
-   |  (VClosure(env,[]),s) -> Runtime.VInt 0
+   | ((VClosure (env,Branch(POne , EFun(Binding(a_i,_),expr))::[])),i) ->  expression (Env.bind a_i i env) expr
+   | (VClosure(env,Branch(p,e)::l),s)-> let (envf,rf)= (closure env s p) in if rf then (expression envf e) else  (expression_app (VClosure(env,l),s))
+   |  (VClosure(enva,[]),s) -> Runtime.VInt 0
    | _ -> failwith "app non reconu"
 
 and closure env s = function
@@ -53,19 +53,24 @@ and closure env s = function
    | PNot(p) -> let (a,b)= (closure env s p) in (a,(not b))
    | PVar v ->  ((Env.bind (Named v) s env),true) 
    | POne -> (env,true)
-   | _ -> (env,false)
+   | PZero -> (env,false)
+   | _
+ -> (env,true)
 
 and closure_prod env s = function
    | (cp,Some pp)::lp -> let r = match s with 
         VStruct((cs,Some ps)::ls) -> if cp=cs then ( let (a,b)=(closure env ps pp) in if b then (closure_prod a  (VStruct(ls)) lp) else (env,false))  else (env,false) | _-> (env,false) in r;
    | (cp,_)::lp -> let r = match s with 
-        VStruct((cs,None)::ls) -> if cp=cs then  (closure_prod env  (VStruct(ls)) lp)   else (env,false) | _-> (env,false) in r; 
+        | VStruct((cs,None)::ls) -> if cp=cs then  (closure_prod env  (VStruct(ls)) lp)   else (env,false) 
+        | VStruct((cs,Some ps)::ls) -> if cp=cs then  (closure_prod env  (VStruct(ls)) lp)   else (env,false) 
+        | _-> (env,false) in r; 
    | [] -> if s=(VStruct([])) then (env,true) else (env,false);  
 
 and vdefinition env = function 
   | Simple (Binding(a_i,_),expr) ->  (Env.bind (a_i)  (expression env expr)  env)
-  | MutuallyRecursive ((Binding(a_i,_),expr)::l) -> let x= (Env.bind (a_i)  (expression env expr)  env) in vdefinition x (MutuallyRecursive(l))
+  | MutuallyRecursive ((Binding(a_i,_),expr)::l) -> let x= (Env.declare (a_i) env) in   ((Env.define (a_i) (expression x expr) x) ;vdefinition x (MutuallyRecursive(l)))
   | MutuallyRecursive([])-> env
+  | _-> failwith"vdefinition non reconnu"
 
 and expression_prod env = function
    | [] -> []

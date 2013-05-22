@@ -107,89 +107,35 @@ i=constructor_identifier t=typ? { TConstructor(i,t) }
 
 
 expr:  (* ambiguité on separe sequencement des autres expr pour ne pas que sa boucle *)
-e=exprseq {e}
-
-| e=expr POINT r=expr { Sugar.mk_postfix_application e r }
-| e=expr r=exprprincipal  { EApp (e,r) }
-
-| AT t=typ LACOLA c=constructor_definitions RACOLA { EProd(Some t,c) }
-| LACOLA c=constructor_definitions RACOLA { EProd(None,c) }
-
+| e=exprseq {e}
+| e=exprprincipal {e}
 | FUN DEFFUN e=expr { Sugar.mk_fun [ Binding (Unnamed, Some (TSum [TConstructor ( CIdentifier "U", None)])) ] None e} (* sugar mis a l'arache car il marchai pas *)
 | FUN arg=arguments+ DEFTYPE t=typ? DEFFUN e=expr { Sugar.mk_fun arg t e}
 | FUN arg=arguments+ DEFFUN e=expr { Sugar.mk_fun arg None e}
-
-| IF a=expr THEN b=expr { Sugar.mk_ifthen a b }
-| IF a=expr THEN b=expr ELSE c=expr{ Sugar.mk_ifthenelse a b c }
-
-| v=vdefinition IN e=expr { EDef (v,e) }
-| e=expr WHERE v=vdefinition END { Sugar.mk_where e v }
-
-|e=exprprincipal{e}
-
-
-
-exprprincipal: 
-e =exprfinal {e}
-
-| c=constructor_identifier AT t=typ e=crochexpr? { ESum(c,Some t,e) }
-(*| c=constructor_identifier AT t=typ { ESum(c,Some t,None) }*)
-| c=constructor_identifier e=crochexpr? { ESum(c,None,e) }
-(*| c=constructor_identifier { ESum(c,None,None) }*)
-
-| LPAREN e=expr RPAREN { e }
-| LPAREN e=expr DEFTYPE t=typ RPAREN { EAnnot(e,t) }
-
-
-| e=expropnivA {e}
-
-| e=exprunopminus {e}
-| e=exprunoptilde {e}
-
 | CASE AT t=typ LACOLA BAR? b=branches RACOLA { ECase(Some t,b) }
 | CASE LACOLA BAR? b=branches RACOLA { ECase(None,b) }
-
-
-
 | DO LACOLA e=expr RACOLA { Sugar.mk_do e } 
 
-
-
 exprseq:  
-e=seq { ESeq e }
+e=exprprincipal POINTCOMMA s=seq { ESeq (e::s) }
 
-expropnivA:
-| a=expropnivA EQS b=expropnivA { EApp(EApp(EVar (Identifier ":="),a),b) }
-|e=expropnivB{e}
+seq:
+e=exprprincipal POINTCOMMA s=seq { e::s }
+|LPAREN e=seq RPAREN{ e }
+|e=exprprincipal  { [e] }
 
-expropnivB:
-| a=expropnivB OPOR b=expropnivB { EApp(EApp(EVar (Identifier "||"),a),b) }
-|e=expropnivC{e}
-
-expropnivC:
-| a=expropnivC OPAND b=expropnivC { EApp(EApp(EVar (Identifier "&&"),a),b) }
-|e=expropnivD{e}
-
-expropnivD:
-| a=expropnivD o=OPCOMP b=expropnivD { EApp(EApp(EVar (Identifier o),a),b) }
-| a=expropnivD EQ b=expropnivD { EApp(EApp(EVar (Identifier "="),a),b) }
-| a=expropnivD LCHEVR b=expropnivD { EApp(EApp(EVar (Identifier "<"),a),b) }
-| a=expropnivD RCHEVR b=expropnivD { EApp(EApp(EVar (Identifier ">"),a),b) }
-| e=exprunoptilde {e}
-|e=expropnivE{e}
-
-expropnivE:
-| a=expropnivE PLUS b=expropnivE { EApp(EApp(EVar (Identifier "+"),a),b) }
-| a=expropnivE MINUS b=expropnivE { EApp(EApp(EVar (Identifier "-"),a),b) }
-|e=expropnivF{e}
-
-expropnivF:
-| LPAREN e=expropnivA RPAREN {e}
-| a=expropnivF MULT b=expropnivF { EApp(EApp(EVar (Identifier "*"),a),b) }
-| a=expropnivF DIV b=expropnivF { EApp(EApp(EVar (Identifier "/"),a),b) }
-| a=expropnivF MOD b=expropnivF { EApp(EApp(EVar (Identifier "%"),a),b) }
+exprprincipal: 
+| e=expropnivA {e}
+| v=vdefinition IN e=expr { EDef (v,e) }
+| e=expr WHERE v=vdefinition END { Sugar.mk_where e v }
+| IF a=expr THEN b=expr { Sugar.mk_ifthen a b }
+| IF a=expr THEN b=expr ELSE c=expr{ Sugar.mk_ifthenelse a b c }
 | e=exprunopminus {e}
-| e=exprfinal {e}
+| e=exprunoptilde {e}
+
+exprsecondaire:
+| e=exprapp {e}
+| e=exprfinal{e}
 
 
 exprfinal:
@@ -198,24 +144,74 @@ exprfinal:
 | e=CHAR { EChar e}
 | e=STRING { EString e}
 | e=value_identifier { EVar e }
+| AT t=typ LACOLA c=constructor_definitions RACOLA { EProd(Some t,c) }
+| LACOLA c=constructor_definitions RACOLA { EProd(None,c) }
+| c=constructor_identifier AT t=typ e=crochexpr? { ESum(c,Some t,e) }
+(*| c=constructor_identifier AT t=typ { ESum(c,Some t,None) }*)
+| c=constructor_identifier e=crochexpr? { ESum(c,None,e) }
+(*| c=constructor_identifier { ESum(c,None,None) }*)
+| LPAREN e=exprprincipal RPAREN { e }
+| LPAREN e=exprprincipal DEFTYPE t=typ RPAREN { EAnnot(e,t) }
+
+exprapp:
+| e=value_identifier r=exprfinal { EApp (EVar e,r) }
+| e=exprapp r=exprfinal { EApp(e,r) }
+| LPAREN e=expr RPAREN r=exprfinal { EApp(e,r) }
+| e=exprfinal POINT r=exprprincipal { Sugar.mk_postfix_application e r }
+| LPAREN e=exprprincipal RPAREN  POINT r=expr { Sugar.mk_postfix_application e r }
+
+
+expropnivA:
+| a=value_identifier EQS b=expropnivA { EApp(EApp(EVar (Identifier ":="),EVar a),b) }
+|e=expropnivB{e}
+
+expropnivB:
+| a=expropnivB EQ b=expropnivB { EApp(EApp(EVar (Identifier "="),a),b) }
+|e=expropnivC{e}
+
+expropnivC:
+| a=expropnivC OPOR b=expropnivC { EApp(EApp(EVar (Identifier "||"),a),b) }
+|e=expropnivD{e}
+
+expropnivD:
+| a=expropnivD OPAND b=expropnivD { EApp(EApp(EVar (Identifier "&&"),a),b) }
+|e=expropnivE{e}
+
+expropnivE:
+| a=expropnivE o=OPCOMP b=expropnivF { EApp(EApp(EVar (Identifier o),a),b) }
+| a=expropnivE EQ b=expropnivE { EApp(EApp(EVar (Identifier "="),a),b) }
+| a=expropnivE LCHEVR b=expropnivE { EApp(EApp(EVar (Identifier "<"),a),b) }
+| a=expropnivE RCHEVR b=expropnivE { EApp(EApp(EVar (Identifier ">"),a),b) }
+|e=expropnivF{e}
+
+expropnivF:
+| a=expropnivF PLUS b=expropnivF { EApp(EApp(EVar (Identifier "+"),a),b) }
+| a=expropnivF MINUS b=expropnivF { EApp(EApp(EVar (Identifier "-"),a),b) }
+|e=expropnivG{e}
+
+expropnivG:
+| a=expropnivG MULT b=expropnivG { EApp(EApp(EVar (Identifier "*"),a),b) }
+| a=expropnivG DIV b=expropnivG { EApp(EApp(EVar (Identifier "/"),a),b) }
+| a=expropnivG MOD b=expropnivG { EApp(EApp(EVar (Identifier "%"),a),b) }
+| LPAREN e=exprunopminus RPAREN{e}
+| LPAREN e=exprunoptilde RPAREN{e}
+| e=exprsecondaire {e}
+
+
+
+
 
 exprunopminus:
- MINUS e=INT %prec Unop{ EApp(EVar (Identifier "-"),EInt e) }
-| MINUS e=value_identifier %prec Unop{ EApp(EVar (Identifier "-"),EVar e) }
-| MINUS LPAREN e=expr RPAREN %prec Unop{ EApp(EVar (Identifier "-"), e) }
+ MINUS e=INT { EApp(EVar (Identifier "--"),EInt e) }
+| MINUS e=value_identifier { EApp(EVar (Identifier "--"),EVar e) }
+| MINUS LPAREN e=expr RPAREN { EApp(EVar (Identifier "--"), e) }
 
 exprunoptilde:
- TILDE e=INT %prec Unop{ EApp(EVar (Identifier "~"),EInt e) }
-| TILDE e=value_identifier %prec Unop{ EApp(EVar (Identifier "~"),EVar e) }
-| TILDE LPAREN e=expr RPAREN %prec Unop{ EApp(EVar (Identifier "~"), e) }
+| TILDE LPAREN e=expr RPAREN { EApp(EVar (Identifier "~"), e) }
 
 crochexpr:
 LCROCH e=expr RCROCH { e }
 
-seq:
-e=exprprincipal POINTCOMMA s=seq { e::s }
-|LPAREN e=seq RPAREN{ e }
-|e=exprprincipal  { [e] }
 
 constructor_definition:
 c=constructor_identifier FLECHB e=expr { (c,Some e) }
